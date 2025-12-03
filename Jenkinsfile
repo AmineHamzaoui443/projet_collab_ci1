@@ -2,13 +2,12 @@ pipeline {
     agent any
 
     environment {
-        REGISTRY = "icr.io/<TON_NAMESPACE>"           // Remplace par ton registry OpenShift/IBM
-        IMAGE = "reservation-app-frontend"           // Nom de l'image Docker
+        REGISTRY = "ghcr.io/<TON_COMPTE>"          // GitHub Container Registry
+        IMAGE = "reservation-app-frontend"
         TAG = "latest"
-        OPENSHIFT_TOKEN = credentials('openshift-token') // token OpenShift (non utilisé ici)
-        REGISTRY_CRED = 'registry-cred'              // credentials Jenkins pour registry
-        CC_CLI_TOKEN = credentials('codeclimate-token') // token CodeClimate
-        SNYK_TOKEN = credentials('snyk-token')      // token Snyk
+        REGISTRY_CRED = 'github-packages-cred'     // Credentials Jenkins pour GitHub (username + PAT)
+        CC_CLI_TOKEN = credentials('codeclimate-token')
+        SNYK_TOKEN = credentials('snyk-token')
     }
 
     stages {
@@ -33,11 +32,9 @@ pipeline {
 
         stage('Code Quality & Security') {
             steps {
-                // CodeClimate
                 sh 'curl -L https://github.com/codeclimate/codeclimate/releases/download/0.90.0/codeclimate-0.90.0-linux-amd64.tar.bz2 | tar xjf -'
                 sh './cc analyze --token=$CC_CLI_TOKEN'
-
-                // Snyk
+                
                 sh 'npm install -g snyk'
                 sh 'snyk auth $SNYK_TOKEN'
                 sh 'snyk test'
@@ -54,7 +51,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: REGISTRY_CRED, usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     sh '''
-                        echo $PASS | docker login $REGISTRY -u $USER --password-stdin
+                        echo $PASS | docker login ghcr.io -u $USER --password-stdin
                         docker tag $REGISTRY/$IMAGE:$TAG $REGISTRY/$IMAGE:latest
                         docker push $REGISTRY/$IMAGE:$TAG
                         docker push $REGISTRY/$IMAGE:latest
@@ -66,7 +63,7 @@ pipeline {
 
     post {
         always {
-            sh 'docker logout $REGISTRY'
+            sh 'docker logout ghcr.io'
         }
     }
 }
