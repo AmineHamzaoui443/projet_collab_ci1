@@ -17,7 +17,7 @@ pipeline {
             steps {
                 echo "📝 Lint du code"
                 sh '''
-                npx eslint . --ext .ts,.tsx,.js || true
+                    npx eslint . --ext .ts,.tsx,.js || true
                 '''
             }
         }
@@ -32,17 +32,17 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 echo "🔍 Analyse SonarQube"
-                
-                // Assure-toi d'avoir ajouté ton token SonarQube dans Jenkins Credentials
+
+                // Sonar token enregistré dans Jenkins Credentials
                 withCredentials([string(credentialsId: 'SONARQUBE_TOKEN', variable: 'SONAR_TOKEN')]) {
                     withSonarQubeEnv('SonarQubeServer') {
-                        sh """
+                        sh '''
                             sonar-scanner \
                             -Dsonar.projectKey=reservation_front \
                             -Dsonar.sources=./src \
                             -Dsonar.host.url=http://localhost:9000 \
-                            -Dsonar.login=$
-                        """
+                            -Dsonar.login=$SONAR_TOKEN
+                        '''
                     }
                 }
             }
@@ -70,7 +70,7 @@ pipeline {
             steps {
                 echo "🚀 Push vers GitHub Container Registry"
 
-                // Assure-toi d'avoir ajouté ton PAT GitHub dans Jenkins Credentials
+                // PAT GitHub enregistré dans Jenkins Credentials
                 withCredentials([string(credentialsId: 'GITHUB_PAT', variable: 'GITHUB_PAT')]) {
                     sh '''
                         echo $GITHUB_PAT | docker login ghcr.io -u AmineHamzaoui443 --password-stdin
