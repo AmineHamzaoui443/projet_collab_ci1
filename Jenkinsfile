@@ -30,15 +30,18 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 echo "🔍 Analyse SonarQube"
-
-                withSonarQubeEnv('SonarQubeServer') {
-                    sh '''
-                        sonar-scanner \
-                        -Dsonar.projectKey=reservation_front \
-                        -Dsonar.sources=./src \
-                        -Dsonar.host.url=http://localhost:9000 \
-                        -Dsonar.login=squ_c1bde0c3e8e92658fb22f543c11e7d1412ee24e1
-                    '''
+                
+                // Assure-toi d'avoir ajouté ton token SonarQube dans Jenkins Credentials
+                withCredentials([string(credentialsId: 'SONARQUBE_TOKEN', variable: 'SONAR_TOKEN')]) {
+                    withSonarQubeEnv('SonarQubeServer') {
+                        sh """
+                            sonar-scanner \
+                            -Dsonar.projectKey=reservation_front \
+                            -Dsonar.sources=./src \
+                            -Dsonar.host.url=http://localhost:9000 \
+                            -Dsonar.login=$SONAR_TOKEN
+                        """
+                    }
                 }
             }
         }
@@ -65,10 +68,13 @@ pipeline {
             steps {
                 echo "🚀 Push vers GitHub Container Registry"
 
-                sh '''
-                    echo "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" | docker login ghcr.io -u AmineHamzaoui443 --password-stdin
-                    docker push ghcr.io/AmineHamzaoui443/reservation-frontend:latest
-                '''
+                // Assure-toi d'avoir ajouté ton PAT GitHub dans Jenkins Credentials
+                withCredentials([string(credentialsId: 'GITHUB_PAT', variable: 'GITHUB_PAT')]) {
+                    sh '''
+                        echo $GITHUB_PAT | docker login ghcr.io -u AmineHamzaoui443 --password-stdin
+                        docker push ghcr.io/AmineHamzaoui443/reservation-frontend:latest
+                    '''
+                }
             }
         }
     }
