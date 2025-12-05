@@ -16,7 +16,9 @@ pipeline {
         stage('Linting') {
             steps {
                 echo "📝 Lint du code"
-                sh 'npx eslint . --ext .ts,.tsx,.js || true'
+                sh '''
+                npx eslint . --ext .ts,.tsx,.js || true
+                '''
             }
         }
 
