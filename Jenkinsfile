@@ -1,13 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        // Nom de l'image Docker et registry (à adapter)
-        DOCKER_IMAGE = "mon-utilisateur/mon-projet"
-        REGISTRY = "docker.io" // ou ton registry
-        VERSION = "${env.BUILD_NUMBER}"
-    }
-
     stages {
 
         stage('Checkout & Install Dependencies') {
@@ -20,64 +13,72 @@ pipeline {
             }
         }
 
-        stage('Linting / Vérification code') {
+        stage('Linting') {
             steps {
-                echo "📝 Vérification de la structure du code avec ESLint"
-                // Recherche automatique des fichiers à linter
-                sh 'npx eslint . --ext .js,.ts,.tsx'
+                echo "📝 Lint du code"
+                sh 'npx eslint . --ext .ts,.tsx,.js'
             }
         }
 
         stage('Unit Tests') {
             steps {
-                echo "🧪 Lancement des tests unitaires"
+                echo "🧪 Tests unitaires"
                 sh 'npm test'
             }
         }
 
-        stage('Code Quality') {
+        stage('SonarQube Analysis') {
             steps {
-                echo "🔍 Analyse qualité du code avec SonarQube"
+                echo "🔍 Analyse SonarQube"
+
                 withSonarQubeEnv('SonarQubeServer') {
-                    sh 'sonar-scanner -Dsonar.projectKey=mon-projet -Dsonar.sources=. -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_AUTH_TOKEN'
+                    sh '''
+                        sonar-scanner \
+                        -Dsonar.projectKey=reservation_front \
+                        -Dsonar.sources=./src \
+                        -Dsonar.host.url=http://localhost:9000 \
+                        -Dsonar.login=squ_c1bde0c3e8e92658fb22f543c11e7d1412ee24e1
+                    '''
                 }
             }
         }
 
         stage('Docker Build') {
             steps {
-                echo "🐳 Construction de l'image Docker"
-                sh "docker build -t ${DOCKER_IMAGE}:${VERSION} -f Dockerfile ."
-                sh "docker tag ${DOCKER_IMAGE}:${VERSION} ${DOCKER_IMAGE}:latest"
+                echo "🐳 Build de l’image Docker"
+                sh '''
+                    docker build -t ghcr.io/AmineHamzaoui443/reservation-frontend:latest .
+                '''
             }
         }
 
-        stage('Docker Image Scan') {
+        stage('Trivy Security Scan') {
             steps {
-                echo "🔒 Scan de l'image Docker avec Trivy"
-                sh "trivy image --exit-code 1 --severity HIGH,CRITICAL ${DOCKER_IMAGE}:${VERSION}"
+                echo "🔒 Scan Trivy"
+                sh '''
+                    trivy image --exit-code 1 --severity HIGH,CRITICAL ghcr.io/AmineHamzaoui443/reservation-frontend:latest
+                '''
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                echo "🚀 Push de l'image Docker vers le registry"
-                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin ${REGISTRY}"
-                    sh "docker push ${DOCKER_IMAGE}:${VERSION}"
-                    sh "docker push ${DOCKER_IMAGE}:latest"
-                }
+                echo "🚀 Push vers GitHub Container Registry"
+
+                sh '''
+                    echo "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" | docker login ghcr.io -u AmineHamzaoui443 --password-stdin
+                    docker push ghcr.io/AmineHamzaoui443/reservation-frontend:latest
+                '''
             }
         }
-
     }
 
     post {
         success {
-            echo "✅ Pipeline terminée avec succès. L'image Docker est disponible dans le registry."
+            echo "✅ Pipeline complète : Lint + Tests + Sonar + Docker + Trivy + Push !"
         }
         failure {
-            echo "❌ Pipeline échouée. Vérifier les logs pour plus de détails."
+            echo "❌ Pipeline échouée. Vérifie les logs."
         }
     }
 }
