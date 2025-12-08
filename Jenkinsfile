@@ -41,7 +41,7 @@ pipeline {
                             -Dsonar.projectKey=reservation_front \
                             -Dsonar.sources=./src \
                             -Dsonar.host.url=http://localhost:9000 \
-                            -Dsonar.login=$SONAR_TOKEN
+                            -Dsonar.login=$SONAR_TOKEN	
                         '''
                     }
                 }
@@ -52,7 +52,7 @@ pipeline {
             steps {
                 echo "🐳 Build de l’image Docker"
                 sh '''
-                    docker build -t ghcr.io/AmineHamzaoui443/reservation-frontend:latest .
+                    docker build -t ghcr.io/aminehamzaoui443/reservation-frontend:latest .
                 '''
             }
         }
@@ -61,7 +61,7 @@ pipeline {
             steps {
                 echo "🔒 Scan Trivy"
                 sh '''
-                    trivy image --exit-code 1 --severity HIGH,CRITICAL ghcr.io/AmineHamzaoui443/reservation-frontend:latest
+                    trivy image --exit-code 1 --severity HIGH,CRITICAL ghcr.io/aminehamzaoui443/reservation-frontend:latest
                 '''
             }
         }
@@ -73,8 +73,8 @@ pipeline {
                 // PAT GitHub enregistré dans Jenkins Credentials
                 withCredentials([string(credentialsId: 'GITHUB_PAT', variable: 'GITHUB_PAT')]) {
                     sh '''
-                        echo $GITHUB_PAT | docker login ghcr.io -u AmineHamzaoui443 --password-stdin
-                        docker push ghcr.io/AmineHamzaoui443/reservation-frontend:latest
+                        echo $GITHUB_PAT | docker login ghcr.io -u aminehamzaoui443 --password-stdin
+                        docker push ghcr.io/aminehamzaoui443/reservation-frontend:latest
                     '''
                 }
             }
