@@ -13,14 +13,29 @@ pipeline {
             }
         }
 
-        stage('Linting') {
+        stage('Lint du code') {
             steps {
-                echo "📝 Lint du code"
+                echo "📝 Lint avec pourcentage de passage"
+
                 sh '''
-                    npx eslint . --ext .ts,.tsx,.js || true
+                    REPORT=$(npx eslint . --ext .ts,.tsx,.js -f json)
+                    ERRORS=$(echo $REPORT | jq '.[0].errorCount')
+                    LINES=$(wc -l $(find src -type f -name "*.ts*" ) | tail -n1 | awk '{print $1}')
+
+                    RATE=$((100 - (ERRORS * 100 / LINES)))
+
+                    echo "Qualité ESLint : $RATE%"
+
+                    MIN_RATE=95
+
+                    if [ "$RATE" -lt "$MIN_RATE" ]; then
+                        echo "❌ Qualité insuffisante ($RATE% < $MIN_RATE%)"
+                        exit 1
+                    fi
                 '''
             }
         }
+
 
         stage('Unit Tests') {
             steps {
